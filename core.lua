@@ -3,6 +3,8 @@ local addon = CreateFrame("Frame", addonName)
 
 local damageLabels = {}
 local tooltip = CreateFrame("GameTooltip", addonName.."Tooltip", nil, "GameTooltipTemplate")
+local updateTimer = 0.5 -- How often to update the display, in seconds
+local lastUpdate = 0
 
 -- A helper function to create or get the damage label for an action button
 local function GetOrCreateDamageLabel(button)
@@ -25,14 +27,19 @@ local function GetSpellDamage(spellID)
     for i = 1, tooltip:NumLines() do
         local line = _G[tooltip:GetName() .. "TextLeft" .. i]:GetText()
         if line then
-            -- This pattern looks for numbers (e.g., "350 to 400" or "32") and the word "damage" or "skade"
-            local damageValue = string.match(line, "(%d+ to %d+) damage") or string.match(line, "(%d+) damage")
-            if not damageValue then
-                damageValue = string.match(line, "(%d+ til %d+) skade") or string.match(line, "(%d+) skade")
-            end
+            -- Let's print the line to find the correct text format
+            print("Checking tooltip line: " .. line)
+            
+            -- This is the new, more flexible pattern
+            local damageValue = string.match(line, "(%d+%p?%d* to %d+%p?%d*)") or string.match(line, "(%d+%p?%d*)")
+            
             if damageValue then
-                print("Found damage for spell ID " .. spellID .. ": " .. damageValue)
-                return damageValue
+                local text = string.lower(line)
+                -- We only want the damage number if the word "skade" or "damage" is on the same line
+                if string.find(text, "skade") or string.find(text, "damage") then
+                    print("Found damage for spell ID " .. spellID .. ": " .. damageValue)
+                    return damageValue
+                end
             end
         end
     end
@@ -62,15 +69,21 @@ local function UpdateDamageDisplays()
             end
         end
     end
-    print("Update complete.")
 end
 
--- Register for relevant events to update the display
-addon:SetScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_LOGIN" or event == "ACTIONBAR_SLOT_CHANGED" then
+-- Use a timer to update the display regularly
+addon:SetScript("OnUpdate", function(self, elapsed)
+    lastUpdate = lastUpdate + elapsed
+    if lastUpdate >= updateTimer then
         UpdateDamageDisplays()
+        lastUpdate = 0
     end
 end)
 
+-- Initial update on login
 addon:RegisterEvent("PLAYER_LOGIN")
-addon:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+addon:SetScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_LOGIN" then
+        UpdateDamageDisplays()
+    end
+end)
