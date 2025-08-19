@@ -31,15 +31,18 @@ local function GetSpellDamage(spellID)
                 damageValue = string.match(line, "(%d+ til %d+) skade") or string.match(line, "(%d+) skade")
             end
             if damageValue then
+                print("Found damage for spell ID " .. spellID .. ": " .. damageValue)
                 return damageValue
             end
         end
     end
+    print("No damage found for spell ID " .. spellID)
     return ""
 end
 
 -- The main function to update the damage labels on all action bar buttons
 local function UpdateDamageDisplays()
+    print("Updating spell damage displays...")
     for i = 1, 120 do -- Loop through all possible action bar slots
         local button = _G["ActionButton" .. i]
         if button then
@@ -59,6 +62,7 @@ local function UpdateDamageDisplays()
             end
         end
     end
+    print("Update complete.")
 end
 
 -- Register for relevant events to update the display
