@@ -2,7 +2,6 @@ local addonName = "SpellDamageDisplay"
 local addon = CreateFrame("Frame", addonName)
 
 local damageLabels = {}
-local tooltip = CreateFrame("GameTooltip", addonName.."Tooltip", nil, "GameTooltipTemplate")
 local updateTimer = 0.5 -- How often to update the display, in seconds
 local lastUpdate = 0
 
@@ -11,41 +10,45 @@ local function GetOrCreateDamageLabel(button)
     local label = damageLabels[button]
     if not label then
         label = button:CreateFontString(nil, "OVERLAY")
-        
-        -- Nytt: Mindre font og justering for å sentrere teksten
-        label:SetFont(STANDARD_TEXT_FONT, 8, "OUTLINE") -- Fontstørrelse redusert til 8
-        label:SetWidth(button:GetWidth()) -- Sett bredden til ikonets bredde
-        label:SetJustifyH("CENTER") -- Juster horisontalt til midten
-        
-        -- Nytt: Plassering for å unngå at teksten overlapper ikonet
-        label:SetPoint("BOTTOM", 0, 5) -- Juster posisjon til litt over bunnen av ikonet
-        
-        label:SetTextColor(1, 1, 0) -- Yellow text
+        label:SetFont(STANDARD_TEXT_FONT, 8, "OUTLINE")
+        label:SetWidth(button:GetWidth())
+        label:SetJustifyH("CENTER")
+        label:SetPoint("BOTTOM", 0, 5)
+        label:SetTextColor(1, 1, 0)
         damageLabels[button] = label
     end
     return label
 end
 
--- A helper function to extract damage numbers from a spell's tooltip
+-- The core logic to get damage from a spell's tooltip
 local function GetSpellDamage(spellID)
+    local tooltip = CreateFrame("GameTooltip", "LocalSpellDamageTooltip", nil, "GameTooltipTemplate")
     tooltip:SetOwner(UIParent, "ANCHOR_NONE")
     tooltip:SetSpellByID(spellID)
 
     for i = 1, tooltip:NumLines() do
         local line = _G[tooltip:GetName() .. "TextLeft" .. i]:GetText()
         if line then
-            -- This pattern is more robust and will handle numbers with commas, e.g., "1,012"
-            local minDamage, maxDamage = string.match(line, "([%d,%.]+) to ([%d,%.]+) damage") or string.match(line, "([%d,%.]+) to ([%d,%.]+) skade")
-            local singleDamage = string.match(line, "([%d,%.]+) damage") or string.match(line, "([%d,%.]+) skade")
+            -- Mønster for å fange tall, også med punktum eller komma
+            local minDamage, maxDamage = string.match(line, "([%d%.,]+)%s?to%s?([%d%.,]+) damage")
+            if not minDamage then
+                minDamage, maxDamage = string.match(line, "([%d%.,]+)%s?til%s?([%d%.,]+) skade")
+            end
+            local singleDamage = string.match(line, "([%d%.,]+) damage") or string.match(line, "([%d%.,]+) skade")
 
             if minDamage and maxDamage then
-                -- Return a compact format "min-max"
                 return minDamage .. "-" .. maxDamage
             elseif singleDamage then
                 return singleDamage
             end
         end
     end
+    
+    tooltip:Hide()
+    tooltip:ClearAllPoints()
+    tooltip:SetParent(nil)
+    tooltip = nil
+
     return ""
 end
 
