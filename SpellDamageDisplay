@@ -1,0 +1,6 @@
+## Interface: 50400
+## Title: Spell Damage Display
+## Version: 0.0.1
+## Author: Ole Lasse
+## Notes: Displays tooltip damage on action bar icons.
+core.lua
