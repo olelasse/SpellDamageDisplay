@@ -11,8 +11,15 @@ local function GetOrCreateDamageLabel(button)
     local label = damageLabels[button]
     if not label then
         label = button:CreateFontString(nil, "OVERLAY")
-        label:SetFont(STANDARD_TEXT_FONT, 10, "OUTLINE")
-        label:SetPoint("CENTER", 0, 0) -- Adjust position as needed
+        
+        -- Nytt: Mindre font og justering for å sentrere teksten
+        label:SetFont(STANDARD_TEXT_FONT, 8, "OUTLINE") -- Fontstørrelse redusert til 8
+        label:SetWidth(button:GetWidth()) -- Sett bredden til ikonets bredde
+        label:SetJustifyH("CENTER") -- Juster horisontalt til midten
+        
+        -- Nytt: Plassering for å unngå at teksten overlapper ikonet
+        label:SetPoint("BOTTOM", 0, 5) -- Juster posisjon til litt over bunnen av ikonet
+        
         label:SetTextColor(1, 1, 0) -- Yellow text
         damageLabels[button] = label
     end
@@ -27,30 +34,24 @@ local function GetSpellDamage(spellID)
     for i = 1, tooltip:NumLines() do
         local line = _G[tooltip:GetName() .. "TextLeft" .. i]:GetText()
         if line then
-            -- Let's print the line to find the correct text format
-            print("Checking tooltip line: " .. line)
-            
-            -- This is the new, more flexible pattern
-            local damageValue = string.match(line, "(%d+%p?%d* to %d+%p?%d*)") or string.match(line, "(%d+%p?%d*)")
-            
-            if damageValue then
-                local text = string.lower(line)
-                -- We only want the damage number if the word "skade" or "damage" is on the same line
-                if string.find(text, "skade") or string.find(text, "damage") then
-                    print("Found damage for spell ID " .. spellID .. ": " .. damageValue)
-                    return damageValue
-                end
+            -- This pattern is more robust and will handle numbers with commas, e.g., "1,012"
+            local minDamage, maxDamage = string.match(line, "([%d,%.]+) to ([%d,%.]+) damage") or string.match(line, "([%d,%.]+) to ([%d,%.]+) skade")
+            local singleDamage = string.match(line, "([%d,%.]+) damage") or string.match(line, "([%d,%.]+) skade")
+
+            if minDamage and maxDamage then
+                -- Return a compact format "min-max"
+                return minDamage .. "-" .. maxDamage
+            elseif singleDamage then
+                return singleDamage
             end
         end
     end
-    print("No damage found for spell ID " .. spellID)
     return ""
 end
 
 -- The main function to update the damage labels on all action bar buttons
 local function UpdateDamageDisplays()
-    print("Updating spell damage displays...")
-    for i = 1, 120 do -- Loop through all possible action bar slots
+    for i = 1, 120 do
         local button = _G["ActionButton" .. i]
         if button then
             local actionType, spellID = GetActionInfo(i)
